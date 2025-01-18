@@ -36,6 +36,16 @@ public:
         this->len  = slice.len;
     }
 
+    //复制赋值运算符
+    Slice& operator=(Slice<T> &slice)
+    noexcept {
+        //printf("Slice1 移动赋值运算符\n");
+        this->addr = slice.addr;
+        this->len = slice.len;
+
+        return *this;
+    }
+
     // 移动赋值运算符
     // 和复制赋值运算符的区别在于，其参数是右值引用
     Slice& operator= (Slice<T> &&slice)
@@ -45,6 +55,21 @@ public:
         this->len  = slice.len;
 
         return *this;
+    }
+
+    bool no_legal() {
+        return this->addr == nullptr || this->len <= 0;
+    }
+
+    bool operator==( Slice<T> other) {
+        if(this->len != other.size())
+            return false;
+
+        for( size_t index = 0; index < other.size(); index++ )
+            if(this->at(index) != other.at(index) )
+                return false;
+
+        return true;
     }
 
     T operator[](int32_t i)
@@ -59,6 +84,14 @@ public:
 
     std::size_t size(){
         return this->len;
+    }
+
+    bool at(size_t index, T &ch) {
+        if (index >= this->len)
+            return false;
+
+        ch = *(this->addr + index);
+        return true;
     }
 
     /*   */
@@ -156,346 +189,143 @@ public:
     }
 };
 
-
-
-template <typename T>
-class Space : public Slice<T>{
+template<typename T>
+class SliceTuple {
+    Slice<T> aa;
+    Slice<T> bb;
 public:
-    std::size_t data_size{0};
+    SliceTuple(Slice<T> &a, Slice<T> &b) : aa(a), bb(b){
 
-    static Option<Space<T>> Create(std::size_t size){
-        T* addr = new(std::nothrow)  T[size] ;
+    }
 
-        if( addr == nullptr){
-            return  None();
+//    SliceTuple(Slice<T> a, Slice<T> b) {
+//        aa = a;
+//        bb = b;
+//    }
+
+    bool no_legal() {
+        return aa.no_legal() ;
+    }
+
+    size_t size() {
+        size_t len = 0;
+
+        if (!aa.no_legal())
+            len += aa.size();
+
+        if (!bb.no_legal())
+            len += bb.size();
+
+        return len;
+    }
+
+    T at(size_t pos) {
+        if (pos >= this->size()) {
+            //std::
+        }
+
+        if (pos < aa.size()) {
+            return aa.at(pos);
+        } else {
+            return bb.at(pos - aa.size());
+        }
+    }
+
+    bool at(size_t pos, T &ch) {
+        if (pos >= this->size()) {
+            return false;
+        }
+
+        if (pos < aa.size()) {
+            return aa.at(pos, ch);
+        } else {
+            return bb.at(pos - aa.size(), ch);
+        }
+    }
+
+    size_t find(T ch) {
+        size_t len = this->size();
+
+        for (size_t index = 0; index < len; index++) {
+            if (this->at(index) != ch) {
+                return index;
+            }
+        }
+        return len;
+    }
+
+    size_t find(Slice<T> &ch) {
+        size_t len = this->size();
+
+        for (size_t index = 0; index < len - ch.size(); index++) {
+            size_t pos = 0;
+            for (pos = 0; pos < ch.size(); pos++) {
+                if (this->at(index + pos) != ch.at(pos)) {
+                    break;
+                }
+            }
+            if (pos == ch.size()) {
+                return index;
+            }
+        }
+
+        return len;
+    }
+
+    bool slice(Slice<T> &ch) {
+        if (ch.len > this->size()) {
+            return false;
+        }
+
+        for (size_t index = 0; index < ch.size(); index++) {
+            ch.set(index, this->at(index)) ;
+        }
+
+        return true;
+    }
+
+};
+
+
+template<typename T>
+class Space : public Slice<T> {
+public:
+    static Space<T> Create(std::size_t size) {
+        T *addr = new(std::nothrow)  T[size];
+
+        if (addr == nullptr) {
+            return {nullptr, 0};
         }
 
         //printf(" Space new %p\n", addr );
-        return Some( std::move(Space<T>( addr,size )));
+        return Space<T>(addr, size);
     }
 
-    ~Space(){
+    Space(T *_addr, std::size_t size) : Slice<T>(_addr, size) {
+        //this->data_size = 0;
+    }
+
+    Space(Space &&old) noexcept: Slice<T>(std::move(old)) {
+        this->addr = old.addr;
+        this->len = old.len;
+
+        old.addr = nullptr;
+        old.len = 0;
+    }
+
+    Space(Space &) = delete;
+
+    Space(const Space &) = delete;
+
+    ~Space() {
         //std::cout << "~Space() :"  << std::endl;
-        if( this->addr != nullptr) {
-            printf(" ~Space() : delete %p\n", this->addr );
+        if (this->addr != nullptr) {
+            printf(" ~Space() : delete %p\n", this->addr);
             //std::cout << "~Space() : delete1"  << std::endl;
             delete[] this->addr;
             //std::cout << "~Space() : delete2"  << std::endl;
         }
     }
-
-    Space( T* _addr, std::size_t size) : Slice<T>(_addr, size){
-        this->data_size = 0;
-    }
-
-    Space( Space&& old) : Slice<T>(std::move(old)){
-        this->addr = old.addr ;
-        this->len = old.len;
-        this->data_size = old.data_size;
-
-        old.addr = nullptr ;
-        old.len = 0;
-    }
-
-    Space(Space&) = default;
-    Space(const Space&) = default;
-
-    Option<Slice<T>> slice( std::size_t pos = 0){
-        if( pos >= this->len)
-            return None();
-		
-        return Some(std::move(Slice<T>( this->addr + pos,  data_size - pos )));
-    }
-
-    T* get_wptr( )
-    {
-        return this->addr + this->data_size;
-    }
-
-    Option<Slice<T>> get_wbuf(  ) {
-        std::size_t wbuf_size = this->len - this->data_size;
-        if( wbuf_size == 0)
-        {
-            return None();
-        }
-        
-        return Some(std::move(Slice<T>(this->addr + this->wirte_index, wbuf_size)));
-    }
-
-
-    std::size_t getsize_w(){
-        return  this->len - this->data_size;
-    }
-
-    bool feed( std::size_t size) {
-        if (size > this->len - this->data_size)
-        {
-            return false;
-        }
-
-        this->data_size += size;
-        return true;
-    }
-
-    bool put(T ch){
-        if( this->len - this->data_size <= 0)
-            return false;
-
-        *( this->addr + this->data_size ) = ch;
-        this->data_size += 1;
-        return true;
-    }
-
-    void clear() {
-        this->data_size = 0;
-    }
-
-
-    // bool copy(Slice<T> data) {
-
-    // }
 };
-
-
-template <typename T>
-class Circular : public Slice<T>{
-public:
-    std::size_t read_index{0};
-    std::size_t wirte_index{0};
-    std::size_t data_size{0};
-
-    static Option<Circular<T>> Create(std::size_t size){
-        T* addr = new(std::nothrow)  T[size] ;
-
-        if( addr == nullptr){
-            return  None();
-        }
-
-        return Some( std::move(Circular<T>( addr,size )));
-    }
-
-    static Circular<T> Clone(Circular& old){
-        Circular<T> val(old.addr ,old.len);
-
-        val.data_size  = old.data_size;
-        val.read_index = old.read_index;
-        val.wirte_index = old.wirte_index;
-        return std::move(val);
-    }
-
-    ~Circular(){
-        //std::cout << "~Circular() :"  << std::endl;
-        if( this->addr != nullptr) {
-            std::cout << "~Circular() : delete1"  << std::endl;
-            delete[] this->addr;
-            //std::cout << "~Circular() : delete2"  << std::endl;
-        }
-    }
-
-    Circular( T* _addr, std::size_t size) : Slice<T>(_addr, size) {
-        this->data_size = 0;
-        this->read_index = 0;
-        this->wirte_index = 0;
-    }
-
-    Circular( Circular&& old) : Slice<T>(std::move(old)) {
-        this->addr = old.addr ;
-        this->len = old.len;
-        this->data_size = old.data_size;
-        this->read_index = old.read_index;
-        this->wirte_index = old.wirte_index;
-
-        old.addr = nullptr ;
-        old.len = 0;
-        old.data_size = 0;
-        old.read_index = 0;
-        old.wirte_index = 0;
-    }
-
-    Circular(Circular&) = default;
-
-    Option<Slice<T>> slice( std::size_t pos, std::size_t len = 0){
-        if( pos >= this->len)
-            return None();
-        if( pos + len > this->len)
-            return None();
-
-        if(len == 0 )
-            return Some(std::move(Slice<T>( this->addr + pos,  this->wirte_index - this->pos )));
-
-        return Some(std::move(Slice<T>( this->addr + pos,  len )));
-    }
-
-    T* get_wptr( )
-    {
-        return this->addr + this->wirte_index;
-    }
-
-    Option<Slice<T>> get_wbuf(  ) {
-        std::size_t wbuf_size = this->len - this->data_size;
-        if( wbuf_size == 0)
-        {
-            return None();
-        }
-        if ( wbuf_size + this->wirte_index <= this->len)
-        {
-            return Some(std::move(Slice<T>(this->addr + this->wirte_index, wbuf_size)));
-        }
-        else
-        {
-            return Some(std::move(Slice<T>(this->addr + this->wirte_index, this->len - this->wirte_index)));
-                   // Some(std::move(Slice<T>(this->addr , wbuf_size - (this->len - this->wirte_index))))};
-        }
-    }
-
-
-//    std::pair<Option<Slice<T>>, Option<Slice<T>>> get_wbuf(  ) {
-//        std::size_t wbuf_size = this->len - this->data_size;
-//        if( wbuf_size == 0)
-//        {
-//            return {None(), None()};
-//        }
-//        if ( wbuf_size + this->wirte_index <= this->len)
-//        {
-//            return {Some(std::move(Slice<T>(this->addr + this->wirte_index, wbuf_size))), None()};
-//        }
-//        else
-//        {
-//            // bs_buf->nb_seg = 2;
-//            // bs_buf->seg[0].seg_base = this->addr + this->wirte_index;
-//            // bs_buf->seg[0].seg_len = this->len - this->wirte_index;
-//            // bs_buf->seg[1].seg_base = this->addr;
-//            // bs_buf->seg[1].seg_len = wbuf_size - bs_buf->seg[0].seg_len;
-//            return {Some(std::move(Slice<T>(this->addr + this->wirte_index, this->len - this->wirte_index))),
-//                    Some(std::move(Slice<T>(this->addr , wbuf_size - (this->len - this->wirte_index))))};
-//        }
-//    }
-
-    std::size_t getsize_w(){
-        return  this->len - this->data_size;
-    }
-
-    bool feed( std::size_t size) {
-        if (size > this->len - this->data_size)
-        {
-            return false;
-        }
-
-        this->wirte_index += size;
-        if (this->wirte_index >= this->len)
-        {
-            this->wirte_index -= this->len;
-        }
-        this->data_size += size;
-
-        return true;
-    }
-
-    T* get_rptr() {
-        return this->addr + this->read_index;
-    }
-
-    bool put(T ch){
-        if( this->len - this->data_size <= 0)
-            return false;
-
-        *( this->addr + this->read_index ) = ch;
-        this->feed(1);
-        return true;
-    }
-
-    Option<Slice<T>> get_rbuf( )
-    {
-        if(  this->data_size  <= 0)
-        {
-            return None();
-        }
-
-        if (this->data_size + this->read_index <= this->len)
-        {
-            return Some( std::move(Slice<T>(this->addr + this->read_index, this->data_size)));
-        }
-        else
-        {
-            return Some( std::move(Slice<T>(this->addr + this->read_index, this->len - this->read_index)));
-        }
-    }
-
-//    std::pair<Option<Slice<T>>, Option<Slice<T>>> get_rbuf( )
-//    {
-//        if(  this->data_size  <= 0)
-//        {
-//            return {None(),None()};
-//        }
-//
-//        if (this->data_size + this->read_index <= this->len)
-//        {
-//            return { Some({this->addr + this->read_index, this->data_size}), None};
-//        }
-//        else
-//        {
-//            // bs_buf->nb_seg = 2;
-//            // bs_buf->seg[0].seg_base = handle->buf + handle->ridx;
-//            // bs_buf->seg[0].seg_len = handle->buf_size - handle->ridx;
-//            // bs_buf->seg[1].seg_base = handle->buf;
-//            // bs_buf->seg[1].seg_len = rbuf_size-bs_buf->seg[0].seg_len;
-//
-//            return { Some({this->addr + this->read_index, this->len - this->read_index}),
-//                     Some({this->addr, this->data_size - (this->len - this->read_index)})};
-//        }
-//
-//        return 0;
-//    }
-
-
-    std::size_t getsize_r( )
-    {
-        return this->data_size;
-    }
-
-    bool drain(  std::size_t size)
-    {
-        if (size > this->data_size)
-        {
-            // not enough data
-            return false;
-        }
-        this->read_index += size;
-        if (this->read_index >= this->len)
-        {
-            this->read_index -= this->len;
-        }
-        this->data_size -= size;
-        return true;
-    }
-
-    Option<T> take_one(){
-        if( this->data_size <= 0)
-            return None();
-
-        T ch(*(this->addr + this->read_index));
-        this->drain(1);
-        return Some(ch);
-    }
-
-    void clear() {
-        this->data_size = 0;
-        this->read_index = 0;
-        this->wirte_index = 0;
-    }
-
-    std::string to_string() {
-        std:: string ss("Circular : ");
-
-        //ss += std::string("addr ");       ss += std::string((char*)this->addr);
-        ss += std::string("len ");        ss += std::to_string(this->len);
-        ss += std::string("data_size ");  ss += std::to_string(data_size);
-        ss += std::string("read_index "); ss += std::to_string(read_index);
-        ss += std::string("wirte_index ");ss += std::to_string(wirte_index);
-
-        return ss;
-    }
-};
-
 
 #endif
