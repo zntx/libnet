@@ -21,7 +21,7 @@ add_library( ${PROJECT_NAME} STATIC ${SOURCES} )
 
 #aux_source_directory(demo D_SOURCES)
 #
-#include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} 
 #
 ## 生成可执行文件useHello
 #add_executable( testnet ${D_SOURCES} )
