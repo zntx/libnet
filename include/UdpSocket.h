@@ -5,7 +5,6 @@
 #include <string>
 #include <stdint.h>
 #include "Slice.h"
-#include "Result.h"
 #include "SocketAddr.h"
 #include "Socket.h"
 
@@ -15,21 +14,21 @@ using namespace std::chrono;
 class UdpSocket : public Socket
 {
 public:
-    static Result<UdpSocket> Bind(SocketAddr host, int backlog=24);
-    static Result<UdpSocket> Bind(Slice<const char> host, uint16_t port, int backlog=24);
-    static Result<UdpSocket> Bind(std::string domain, uint16_t port, int backlog=24);
-    static Result<UdpSocket> Bind(std::string domain, int backlog=24);
+    static UdpSocket * Bind(SocketAddr host, int backlog=24);
+    static UdpSocket * Bind(Slice<const char> host, uint16_t port, int backlog=24);
+    static UdpSocket * Bind(std::string domain, uint16_t port, int backlog=24);
+    static UdpSocket * Bind(std::string domain, int backlog=24);
 
-    static Result<UdpSocket> Connect(SocketAddr host, struct timeval timeout = {0,0});
-    static Result<UdpSocket> Connect(const std::string& domain, struct timeval timeout = {0,0});
-    static Result<UdpSocket> Connect(Slice<const char> host, size_t port, struct timeval timeout = {0,0});
+    static UdpSocket * Connect(SocketAddr host, struct timeval timeout = {0, 0});
+    static UdpSocket * Connect(const std::string& domain, struct timeval timeout = {0, 0});
+    static UdpSocket * Connect(Slice<const char> host, size_t port, struct timeval timeout = {0, 0});
 
-    static Result<UdpSocket> Connect(SocketAddr host, uint64_t microseconds = 0);
-    static Result<UdpSocket> Connect(const std::string& domain, uint32_t microseconds = 0);
-    static Result<UdpSocket> Connect(Slice<const char> host, size_t port, uint32_t microseconds = 0);
+    static UdpSocket * Connect(SocketAddr host, uint64_t microseconds = 0);
+    static UdpSocket * Connect(const std::string& domain, uint32_t microseconds = 0);
+    static UdpSocket * Connect(Slice<const char> host, size_t port, uint32_t microseconds = 0);
 
     template<typename Rep, typename Period>
-    static Result<UdpSocket> Connect( SocketAddr &host, const chrono::duration<Rep, Period>& _rtime) {
+    static UdpSocket* Connect( SocketAddr &host, const chrono::duration<Rep, Period>& _rtime) {
         if (_rtime <= _rtime.zero())
             return Connect(host ,0);
         auto _s = chrono::duration_cast<chrono::seconds>(_rtime);
@@ -43,7 +42,7 @@ public:
     }
 
     template<typename Rep, typename Period>
-    static Result<UdpSocket> Connect( std::string &domain, const chrono::duration<Rep, Period>& _rtime) {
+    static UdpSocket* Connect( std::string &domain, const chrono::duration<Rep, Period>& _rtime) {
         if (_rtime <= _rtime.zero())
             return Connect(domain ,0);
         auto _s = chrono::duration_cast<chrono::seconds>(_rtime);
@@ -57,7 +56,7 @@ public:
     }
 
     template<typename Rep, typename Period>
-    static Result<UdpSocket> Connect( Slice<const char> &host, size_t port, const chrono::duration<Rep, Period>& _rtime) {
+    static UdpSocket* Connect( Slice<const char> &host, size_t port, const chrono::duration<Rep, Period>& _rtime) {
         if (_rtime <= _rtime.zero())
             return Connect(host, port ,0);
         auto _s = chrono::duration_cast<chrono::seconds>(_rtime);

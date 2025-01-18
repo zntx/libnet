@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include "IpAddr.h"
-#include "SocketAddr.h"
+#include "../include/IpAddr.h"
+#include "../include/SocketAddr.h"
 
 #if 0
 Result<SocketAddrV4> SocketAddrV4::parse_ascii(Slice<uint8_t> slice)
@@ -103,45 +103,43 @@ std::string SocketAddrV6::to_string()
 /*
 
 */
-Result<SocketAddr> SocketAddr::Create(std::string ips)
+SocketAddr * SocketAddr::Create(std::string ips)
 {
     return Create( Slice<const char>(ips.c_str(), ips.length()));
 }
 
-Result<SocketAddr> SocketAddr::Create(std::string ips, uint16_t port)
+SocketAddr * SocketAddr::Create(std::string ips, uint16_t port)
 {
     return Create( Slice<const char>(ips.c_str(), ips.length()), port);
 }
 
-Result<SocketAddr> SocketAddr::Create(Slice<const char> domain, uint16_t port)
+SocketAddr * SocketAddr::Create(Slice<const char> domain, uint16_t port)
 {
     // 判断IP 是V4还是V6
-    auto r_addr = IpAddr::Create(domain);
-    if (r_addr.is_err())
+    auto addr = IpAddr::Create(domain);
+    if (!addr)
     {
-        return Err(r_addr.unwrap_err());
+        return nullptr;
     }
 
-    IpAddr addr = r_addr.unwrap();
-
-    if (addr.is_v4)
+    if (addr->is_v4)
     {
-        return Ok(SocketAddr(addr.sin4, port));
+        return new(std::nothrow) SocketAddr(addr->sin4, port);
     }
 
-    return Ok(SocketAddr(addr.sin6, port));
+    return new(std::nothrow) SocketAddr(addr->sin6, port);
 }
 
-Result<SocketAddr> SocketAddr::Create( Slice<const char> domain)
+SocketAddr * SocketAddr::Create(Slice<const char> domain)
 {
     auto start = domain.find('[');
-    if( !start.is_empty()) // [:::::]:port
+    if( !start ) // [:::::]:port
     {
         const char* end_str = "]:";
         auto end = domain.find(Slice<const char>(end_str, 2));
-        if( start.is_empty())
+        if( !end )
         {
-            return Err(std::string("[]: 格式不对"));
+            return nullptr;
         }
 
         auto start_real = start.unwrap();
@@ -152,7 +150,7 @@ Result<SocketAddr> SocketAddr::Create( Slice<const char> domain)
 
         if( ips.is_empty() || ports.is_empty())
         {
-            return Err(std::string("[]: 格式不对"));
+            return nullptr;
         }
 
         int port = atoi(ports.unwrap().addr);
@@ -179,7 +177,7 @@ Result<SocketAddr> SocketAddr::Create( Slice<const char> domain)
 
         if( ips.is_empty() || ports.is_empty())
         {
-            return Err(std::string("[]: 格式不对"));
+            return nullptr;
         }
 
         int port = atoi(ports.unwrap().addr);
@@ -315,15 +313,15 @@ SocketAddr &SocketAddr::operator=(const SocketAddr &addr)
     return *this;
 }
 
-IpAddr  SocketAddr::ipaddr()
+IpAddr * SocketAddr::ipaddr()
 {
     if ( sin.ss_family == AF_INET)
     {
-        return IpAddr(this->sin4.sin_addr);
+        return new(std::nothrow) IpAddr(this->sin4.sin_addr);
     }
     else
     {
-        return IpAddr(this->sin6.sin6_addr);
+        return new(std::nothrow) IpAddr(this->sin6.sin6_addr);
     }
 }
 

@@ -69,7 +69,7 @@ public:
 
     virtual ~Socket();
 
-    static  Result<Socket> Create(int famliy, int type, int protno);
+    static Socket * Create(int famliy, int type, int protno);
 
     /** Create a socket file descriptor.
         \param af Address family AF_INET / AF_INET6 / ...
@@ -77,29 +77,29 @@ public:
         \param protocol "tcp" / "udp" / ... */
     SOCKET Create(int af, int type, const std::string& protocol = "");
 
-    Result<void> connect(SocketAddr addr);
+    bool connect(SocketAddr addr);
 
-    Result<void> bind( SocketAddr& addr);
+    bool bind(SocketAddr& addr);
 
-    Result<void> Select(Direction, uint32_t msecond);
+    bool Select(Direction direction, uint32_t msecond);
 
     /** Return file descriptor assigned to this socket. */
     SOCKET get_socket();
 
     SOCKET take();
 
-    Result<SocketAddr> local();
+    SocketAddr * local();
     /** Returns local port number for bound socket file descriptor. */
-    Result<uint16_t> local_port();
+    uint16_t local_port();
 
-    Result<IpAddr> local_ipaddr();
+    IpAddr * local_ipaddr();
 
-    Result<SocketAddr> peer();
+    SocketAddr * peer();
     /** Returns remote port number: ipv4 and ipv6. */
-    Result<uint16_t> peer_port();
+    uint16_t peer_port();
 
     /** Get address/port of last connect() call. */
-    Result<IpAddr> peer_addr();
+    IpAddr * peer_addr();
 
     /** get socket non-block operation. */
     bool no_blocking();
@@ -215,11 +215,11 @@ public:
     bool SetSoSndlowat(int);
     bool SetSoRcvtimeo(struct timeval&);
 
-    Result<void> set_write_timeout(struct timeval &tv);
-    Result<Option<struct timeval>> write_timeout( );
+    bool set_write_timeout(struct timeval &tv);
+    timeval * write_timeout( );
 
-    Result<void> set_read_timeout(struct timeval& tv);
-    Result<Option<struct timeval>> read_timeout( );
+    bool set_read_timeout(struct timeval& tv);
+    timeval * read_timeout( );
 
     bool SetSoRcvbuf(int);
     int SoRcvbuf();

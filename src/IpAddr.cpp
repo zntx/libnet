@@ -24,22 +24,22 @@
 #define IN_IS_ADDR_UNSPECIFIED(ip)			(!(ip))	//地址为全�?
 
 
-Result<Ipv4Addr> Ipv4Addr::Create(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+Ipv4Addr* Ipv4Addr::Create(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     if ( a > 255 || b> 255 || c >255 || d > 255)
     {
-        return Err(std::string("is big ten 255"));
+        return nullptr;
     }
 
-    return Ok(Ipv4Addr(a, b, c, d));
+    return new(std::nothrow) Ipv4Addr(a, b, c, d);
 }
 
-Result<Ipv4Addr> Ipv4Addr::Create(std::string ips)
+Ipv4Addr* Ipv4Addr::Create(std::string ips)
 {
 	return Create(Slice<const char>(ips.c_str(),ips.length()));
 }
 
-Result<Ipv4Addr> Ipv4Addr::Create(Slice<const char> ips)
+Ipv4Addr * Ipv4Addr::Create(Slice<const char> ips)
 {
     uint32_t  key = 0;
     uint32_t  spot = 0;
@@ -49,7 +49,7 @@ Result<Ipv4Addr> Ipv4Addr::Create(Slice<const char> ips)
         {
             if( key >255)
             {
-                return Err(std::string("is big ten 255"));
+                return nullptr;
             }
             spot++;
             key = 0;
@@ -62,19 +62,19 @@ Result<Ipv4Addr> Ipv4Addr::Create(Slice<const char> ips)
 
                 if( key == 0 && ips.addr[i] >= '0')
                 {
-                    return Err(std::string("can not start whith 0"));
+                    return nullptr;
                 }
             }
             else
             {
-                return Err(std::string("not a number"));
+                return nullptr;
             }
         }
     }
 
     if( spot != 3)
     {
-        return Err(std::string("Delimiter not equal to 3"));
+        return nullptr;
     }
 
     char ip_string[16] = {0};
@@ -88,10 +88,10 @@ Result<Ipv4Addr> Ipv4Addr::Create(Slice<const char> ips)
     int ret = inet_pton(AF_INET, ip_string, &ip_a);
     if (ret <= 0)
     {
-        return Err(std::string(StrError(Errno)));
+        return nullptr;
     }
 
-    return Ok(Ipv4Addr(ip_a));
+    return new(std::nothrow) Ipv4Addr(ip_a);
 }
 
 Ipv4Addr::Ipv4Addr( )
@@ -356,7 +356,7 @@ bool isHexDigit(char c) {
            (c >= 'A' && c <= 'F');
 }
 
-Result<Ipv6Addr> Ipv6Addr::Create(Slice<const char> ips)
+Ipv6Addr * Ipv6Addr::Create(Slice<const char> ips)
 {
     // IPv6地址包含8组16位十六进制数，各组之间由冒号分隔
     // 可以有零压缩，即连续的冒号可以省略多组0
@@ -370,7 +370,7 @@ Result<Ipv6Addr> Ipv6Addr::Create(Slice<const char> ips)
         {
             if ( number > 4)
             {
-                return Err(std::string("characters to match")); // 压缩区内的多余冒号
+                return nullptr; // 压缩区内的多余冒号
             }
             number = 0;
 
@@ -381,7 +381,7 @@ Result<Ipv6Addr> Ipv6Addr::Create(Slice<const char> ips)
             }
             if (compresse > 2)
             {
-                return Err(std::string(": to match")); // 压缩区内的多余冒号
+                return nullptr; // 压缩区内的多余冒号
             }
         } else if (isHexDigit(*(ips.addr + index)))
         {
@@ -389,29 +389,29 @@ Result<Ipv6Addr> Ipv6Addr::Create(Slice<const char> ips)
             number++;
         } else
         {
-            return Err(std::string("Illegal characters"));
+            return nullptr;
         }
     }
 
     if ( number > 4)
     {
-        return Err(std::string("characters to match")); // 压缩区内的多余冒号
+        return nullptr; // 压缩区内的多余冒号
     }
 
     // 必须有且仅有8组（考虑零压缩）
     if (compressed_groups > 8)
     {
-        return Err(std::string("Illegal characters"));
+        return nullptr;
     }
 
     struct in6_addr _sin;
     int ret = inet_pton(AF_INET6, ips.addr, &_sin);
     if (ret == 0 || Errno == EAFNOSUPPORT)
     {
-        return Err(std::string(StrError(Errno)));
+        return nullptr;
     }
 	
-	return Ok(Ipv6Addr(_sin));
+	return new(std::nothrow) Ipv6Addr(_sin);
 }
 
 Ipv6Addr::Ipv6Addr(struct in6_addr _sin)
@@ -552,7 +552,7 @@ bool Ipv6Addr::is_unicast_global()
     return this->is_unicast() && !this->is_loopback() && !this->is_unicast_link_local() && !this->is_unique_local() && !this->is_unspecified() && !this->is_documentation() && !this->is_benchmarking();
 }
 
-Option<Ipv6Addr::Ipv6MulticastScope> Ipv6Addr::multicast_scope()
+Ipv6Addr::Ipv6MulticastScope Ipv6Addr::multicast_scope()
 {
     if (this->is_multicast())
     {
@@ -560,34 +560,34 @@ Option<Ipv6Addr::Ipv6MulticastScope> Ipv6Addr::multicast_scope()
         switch (ret)
         {
         case 1:
-            return Some(Ipv6Addr::Ipv6MulticastScope::InterfaceLocal);
+            return Ipv6Addr::Ipv6MulticastScope::InterfaceLocal;
             break;
         case 2:
-            return Some(Ipv6Addr::Ipv6MulticastScope::LinkLocal);
+            return Ipv6Addr::Ipv6MulticastScope::LinkLocal;
             break;
         case 3:
-            return Some(Ipv6Addr::Ipv6MulticastScope::RealmLocal);
+            return Ipv6Addr::Ipv6MulticastScope::RealmLocal;
             break;
         case 4:
-            return Some(Ipv6Addr::Ipv6MulticastScope::AdminLocal);
+            return Ipv6Addr::Ipv6MulticastScope::AdminLocal;
             break;
         case 5:
-            return Some(Ipv6Addr::Ipv6MulticastScope::SiteLocal);
+            return Ipv6Addr::Ipv6MulticastScope::SiteLocal;
             break;
         case 8:
-            return Some(Ipv6Addr::Ipv6MulticastScope::OrganizationLocal);
+            return Ipv6Addr::Ipv6MulticastScope::OrganizationLocal;
             break;
         case 14:
-            return Some(Ipv6Addr::Ipv6MulticastScope::Global);
+            return Ipv6Addr::Ipv6MulticastScope::Global;
             break;
         default:
-            return None();
+            return Ipv6Addr::Ipv6MulticastScope::Null;
             break;
         }
     }
     else
     {
-        return None();
+        return Ipv6Addr::Ipv6MulticastScope::Null;
     }
 }
 
@@ -596,18 +596,18 @@ bool Ipv6Addr::is_multicast()
     return (this->segments(0) & 0xff00) == 0xff00;
 }
 
-Option<Ipv4Addr> Ipv6Addr::to_ipv4_mapped()
+Ipv4Addr * Ipv6Addr::to_ipv4_mapped()
 {
     if (this->addr8[0] == 0 && this->addr8[1] == 0 && this->addr8[2] == 0 &&
         this->addr8[3] == 0 && this->addr8[4] == 0 && this->addr8[5] == 0 &&
         this->addr8[6] == 0 && this->addr8[7] == 0 && this->addr8[8] == 0 &&
         this->addr8[9] == 0 && this->addr8[10] == 0xff && this->addr8[11] == 0xff)
     {
-        Ipv4Addr ipv4(this->addr8[12], this->addr8[13], this->addr8[14], this->addr8[15]);
-        return Some(ipv4);
+
+        return new(std::nothrow) Ipv4Addr(this->addr8[12], this->addr8[13], this->addr8[14], this->addr8[15]);;
     }
 
-    return None();
+    return nullptr;
 }
 
 /// Converts this address to an [`IPv4` address] if it is either
@@ -673,12 +673,10 @@ Option<Ipv4Addr> Ipv6Addr::to_ipv4_mapped()
 // #[inline]
 IpAddr Ipv6Addr::to_canonical()
 {
-    Option<Ipv4Addr> mapped = this->to_ipv4_mapped();
-    if (!mapped.is_empty())
+    auto mapped = this->to_ipv4_mapped();
+    if (mapped )
     {
-        Ipv4Addr _mapped = mapped.unwrap();
-
-        return IpAddr(_mapped);
+        return IpAddr(*mapped);
     }
     return IpAddr(*this);
 }
@@ -855,50 +853,47 @@ bool Ipv6Addr::operator==(const Ipv6Addr &other)
 
 // #[stable(feature = "ip_cmp", since = "1.16.0")]
 
-Result<IpAddr> IpAddr::create(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+IpAddr * IpAddr::create(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     auto  ipv4 = Ipv4Addr::Create(a, b, c, d);
-    if (ipv4.is_ok())
+    if (ipv4)
     {
-        Ipv4Addr ips = ipv4.unwrap();
 
-        return Ok( IpAddr(ips) );
+        return new(std::nothrow) IpAddr(*ipv4) ;
     }
 
-    return Err(ipv4.unwrap_err());
+    return nullptr;
 }
 
-Result<IpAddr> IpAddr::Create(std::string host)
+IpAddr * IpAddr::Create(std::string host)
 {
     return Create(Slice<const char>(host.c_str(),host.length()));
 }
 
-Result<IpAddr> IpAddr::Create(Slice<const char> host)
+IpAddr * IpAddr::Create(Slice<const char> host)
 {
-    if( host.find(':').is_empty() )
+    if( !host.find(':'))
     {
         auto r_v4 = Ipv4Addr::Create(host);
-        if (r_v4.is_ok())
+        if (r_v4 )
         {
-            Ipv4Addr v4 = r_v4.unwrap();
-            return Ok(IpAddr(v4));
+            return new(std::nothrow) IpAddr(*r_v4);
         }
         else
         {
-            return Err(r_v4.unwrap_err());
+            return nullptr;
         }
     }
     else
     {
         auto r_v6 = Ipv6Addr::Create(host);
-        if (r_v6.is_ok())
+        if (r_v6 )
         {
-            Ipv6Addr v6 = r_v6.unwrap();
-            return Ok(IpAddr(v6));
+            return new(std::nothrow) IpAddr(*r_v6);
         }
         else
         {
-            return Err(r_v6.unwrap_err());
+            return nullptr;
         }
     }
 }

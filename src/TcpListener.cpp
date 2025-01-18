@@ -6,36 +6,35 @@
 #include <algorithm>
 
 #include <iostream>
-#include "socket_include.h"
-#include "TcpStream.h"
-#include "TcpListener.h"
+#include "../include/socket_include.h"
+#include "../include/TcpStream.h"
+#include "../include/TcpListener.h"
 
 
-Result<TcpListener> TcpListener::Bind(SocketAddr host , int backlog)
+TcpListener* TcpListener::Bind(SocketAddr host , int backlog)
 {
     auto server = Socket::Create(host.sin4.sin_family, SOCK_STREAM, IPPROTO_TCP);
-    if( server.is_err())
+    if( server == nullptr)
     {
         printf("Socket::Create error\n");
-        return Err(server.unwrap_err());
+        return nullptr;
     }
 
-    auto _server  = server.unwrap();
-    _server.set_reuse(true);
+    server->set_reuse(true);
 
-    if(_server.bind(host).is_err())
-        return Err(std::string(StrError(Errno)));
+    if(server->bind(host))
+        return nullptr;
 
-    if(listen(_server.get_socket(), backlog) != 0)
+    if(listen(server->get_socket(), backlog) != 0)
     {
-        return Err(std::string(StrError(Errno)));
+        return nullptr;
     }
 
-    return Ok(TcpListener(_server.take()));
+    return new(std::nothrow) TcpListener(server->take());
 }
 
 
-Result<TcpListener> TcpListener::Bind(Slice<const char> host, uint16_t port, int backlog)
+TcpListener * TcpListener::Bind(Slice<const char> host, uint16_t port, int backlog)
 {
     SOCKET stream = INVALID_SOCKET;
     struct addrinfo hints;
@@ -62,10 +61,10 @@ Result<TcpListener> TcpListener::Bind(Slice<const char> host, uint16_t port, int
             std::cout << "ip_addr :" << ip_addr.to_string() << "." << std::endl;
 
             auto server = Bind(ip_addr);
-            if( server.is_err())
+            if( server == nullptr)
                 continue;
 
-            stream = server.unwrap().take();
+            stream = server->take();
             std::cout << "find "<<std::endl;
             break;
         }
@@ -75,7 +74,7 @@ Result<TcpListener> TcpListener::Bind(Slice<const char> host, uint16_t port, int
     else
     {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
-        return Err(std::string(StrError(Errno)));
+        return nullptr;
     }
 
     if (stream != INVALID_SOCKET)
@@ -84,21 +83,21 @@ Result<TcpListener> TcpListener::Bind(Slice<const char> host, uint16_t port, int
         {
             fprintf(stdout, "%s:%d socket_listen failed: errno %d\n", __FILE__, __LINE__, errno);
             close(stream);
-            return Err(std::string(StrError(Errno)));
+            return nullptr;
         }
 
-        return Ok(TcpListener(stream));
+        return new(std::nothrow) TcpListener(stream);
     }
 
-    return Err(std::string(StrError(Errno)));
+    return nullptr;
 }
 
 
-Result<TcpListener> TcpListener::Bind(std::string domain, uint16_t port, int backlog) {
+TcpListener * TcpListener::Bind(std::string domain, uint16_t port, int backlog) {
     return Bind(Slice<const char>{domain.c_str(), domain.length()}, port, 0);
 }
 
-Result<TcpListener> TcpListener::Bind(std::string domain, int backlog) {
+TcpListener * TcpListener::Bind(std::string domain, int backlog) {
 
     int num = std::count(domain.begin(),domain.end(),':');
     std::cout << " std::count " << num << std::endl;
@@ -114,18 +113,18 @@ Result<TcpListener> TcpListener::Bind(std::string domain, int backlog) {
 
         if ( start ==  std::string::npos || end == std::string::npos)
         {
-            return Err(std::string ("Illegal string"));
+            return nullptr;
         }
 
         if (  start > end )
         {
-            return Err(std::string ("Illegal string"));
+            return nullptr;
         }
         std::string host = domain.substr(start + 1, end);   // get from "live" to the end
 
         std::string ports = domain.substr(end +2); // get from "live" to the end
         if( ports.empty())
-            return Err(std::string ("Illegal string"));
+            return nullptr;
 
         int port = atoi(ports.c_str());
 
@@ -157,7 +156,7 @@ TcpListener::TcpListener(TcpListener &&other) : Socket(other.fd)
 }
 
 
-Result<std::pair<TcpStream, SocketAddr>> TcpListener::accept( struct timeval timeout)
+std::pair<TcpStream *, SocketAddr *> TcpListener::accept(struct timeval timeout)
 {
     if( timeout.tv_sec == 0 && timeout.tv_usec == 0)
     {
@@ -168,10 +167,12 @@ Result<std::pair<TcpStream, SocketAddr>> TcpListener::accept( struct timeval tim
         if (connect_fd < 0)
         {
             fprintf(stdout, "%s:%d accept failed: [errno  \n", __FILE__, __LINE__);
-            return Err(std::string(StrError(Errno)));
+            return std::pair<TcpStream*, SocketAddr*>{nullptr, nullptr};
         }
 
-        return Ok(std::pair<TcpStream, SocketAddr>{TcpStream(connect_fd), SocketAddr(clent_addr)});
+        return std::pair<TcpStream*, SocketAddr*>{
+            new(std::nothrow) TcpStream(connect_fd),
+            new(std::nothrow)SocketAddr(clent_addr)};
     }
     /* 如果有超时时间，调用select判断在超时时间内，是否有数据传输进来 */
 //    struct timeval timeout;
@@ -190,11 +191,11 @@ Result<std::pair<TcpStream, SocketAddr>> TcpListener::accept( struct timeval tim
             if (FD_ISSET(fd, &fdset)) {
                 break;
             } else {
-                return Err(std::string(StrError(Errno)));
+                return std::pair<TcpStream*, SocketAddr*>{nullptr, nullptr};
             }
         } else if (0 == ret)
         {
-            return Err(std::string("time out"));
+            return std::pair<TcpStream*, SocketAddr*>{nullptr, nullptr};
         } else {
 #ifdef  __WINDOWS__
             if( Errno == WSAEWOULDBLOCK)
@@ -205,7 +206,7 @@ Result<std::pair<TcpStream, SocketAddr>> TcpListener::accept( struct timeval tim
                 continue;
             }
 
-            return Err(std::string(StrError(Errno)));
+            return std::pair<TcpStream*, SocketAddr*>{nullptr, nullptr};
         }
     }while(0);
 
@@ -217,13 +218,13 @@ Result<std::pair<TcpStream, SocketAddr>> TcpListener::accept( struct timeval tim
     if (connect_fd < 0)
     {
         fprintf(stdout, "%s:%d accept failed: [errno  \n", __FILE__, __LINE__);
-        return Err(std::string(StrError(Errno)));
+        return std::pair<TcpStream*, SocketAddr*>{nullptr, nullptr};
     }
 
-    return Ok(std::pair<TcpStream, SocketAddr>{TcpStream(connect_fd), SocketAddr(clent_addr)});
+    return std::pair<TcpStream*, SocketAddr*>{new(std::nothrow) TcpStream(connect_fd), new(std::nothrow)SocketAddr(clent_addr)};
 }
 
-Result<std::pair<TcpStream, SocketAddr>> TcpListener::accept(uint32_t msecond)
+std::pair<TcpStream *, SocketAddr *> TcpListener::accept(uint32_t msecond)
 {
     if( msecond == 0)
     {

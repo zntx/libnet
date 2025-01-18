@@ -8,8 +8,6 @@ https://doc.rust-lang.org/std/net/enum.IpAddr.html
 #define IPADDR_H_H
 #include <stdint.h>
 #include "Slice.h"
-#include "Result.h"
-#include "Option.h"
 #include "socket_include.h"
 
 
@@ -40,11 +38,11 @@ public:
     // #[must_use]
     // #[inline]
 
-    static Result<Ipv4Addr> Create(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+    static Ipv4Addr * Create(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 
-    static Result<Ipv4Addr> Create(std::string ips);
+    static Ipv4Addr * Create(std::string ips);
 
-    static Result<Ipv4Addr> Create(Slice<const char> ips);
+    static Ipv4Addr * Create(Slice<const char> ips);
 
     Ipv4Addr( );
     Ipv4Addr(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
@@ -489,6 +487,7 @@ namespace Ipv4Addr_Static {
 class Ipv6Addr{
     enum  Ipv6MulticastScope
     {
+        Null,
         /// Interface-Local scope.
         InterfaceLocal,
         /// Link-Local scope.
@@ -514,7 +513,7 @@ class Ipv6Addr{
 
 
 public:
-    static Result<Ipv6Addr> Create(Slice<const char> ips);
+    static Ipv6Addr * Create(Slice<const char> ips);
 
     Ipv6Addr(struct in6_addr _sin);
 
@@ -855,7 +854,7 @@ public:
     // #[unstable(feature = "ip", issue = "27709")]
     // #[must_use]
     // #[inline]
-    Option<Ipv6MulticastScope> multicast_scope();
+    Ipv6Addr::Ipv6MulticastScope multicast_scope();
 
     /// Returns [`true`] if this is a multicast address (`ff00::/8`).
     ///
@@ -902,7 +901,7 @@ public:
     // #[must_use = "this returns the result of the operation, 
     //               without modifying the original"]
     // #[inline]
-    Option<Ipv4Addr> to_ipv4_mapped();
+    Ipv4Addr * to_ipv4_mapped();
 
     /// Converts this address to an [`IPv4` address] if it is either
     /// an [IPv4-compatible] address as defined in [IETF RFC 4291 section 2.5.5.1],
@@ -1002,11 +1001,11 @@ public:
     static IpAddr V4( const Ipv4Addr & ip);
     static IpAddr V6( const Ipv6Addr & ip);
 
-    static Result<IpAddr> create(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+    static IpAddr * create(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 
-    static Result<IpAddr> Create(std::string host);
+    static IpAddr * Create(std::string host);
 
-    static Result<IpAddr> Create(Slice<const char> host);
+    static IpAddr * Create(Slice<const char> host);
 
     /// Returns [`true`] for the special 'unspecified' address.
     ///

@@ -6,34 +6,32 @@
 #include <iostream>
 #include <algorithm>
 #include <utility>
-#include "UdpSocket.h"
+#include "../include/UdpSocket.h"
 
 
 
-Result<UdpSocket> UdpSocket::Bind(SocketAddr host , int backlog)
+UdpSocket * UdpSocket::Bind(SocketAddr host , int backlog)
 {
-    auto server = Socket::Create(host.sin4.sin_family, SOCK_STREAM, IPPROTO_TCP);
-    if( server.is_err())
+    auto _server = Socket::Create(host.sin4.sin_family, SOCK_STREAM, IPPROTO_TCP);
+    if( _server == nullptr)
     {
         printf("Socket::Create error\n");
-        return Err(server.unwrap_err());
+        return nullptr;
     }
 
-    auto _server  = server.unwrap();
+    if(!_server->bind(host) )
+        return nullptr;
 
-    if(_server.bind(host).is_err())
-        return Err(std::string(StrError(Errno)));
-
-    if(listen(_server.get_socket(), backlog) != 0)
+    if(listen(_server->get_socket(), backlog) != 0)
     {
-        return Err(std::string(StrError(Errno)));
+        return nullptr;
     }
 
-    return Ok(UdpSocket(_server.take()));
+    return new(std::nothrow) UdpSocket(_server->take());
 }
 
 
-Result<UdpSocket> UdpSocket::Bind(Slice<const char> host, uint16_t port, int backlog)
+UdpSocket * UdpSocket::Bind(Slice<const char> host, uint16_t port, int backlog)
 {
     SOCKET stream = INVALID_SOCKET;
     struct addrinfo hints;
@@ -60,10 +58,10 @@ Result<UdpSocket> UdpSocket::Bind(Slice<const char> host, uint16_t port, int bac
             std::cout << "ip_addr :" << ip_addr.to_string() << "." << std::endl;
 
             auto server = Bind(ip_addr);
-            if( server.is_err())
+            if( server == nullptr)
                 continue;
 
-            stream = server.unwrap().take();
+            stream = server->take();
             std::cout << "find "<<std::endl;
             break;
         }
@@ -73,7 +71,7 @@ Result<UdpSocket> UdpSocket::Bind(Slice<const char> host, uint16_t port, int bac
     else
     {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
-        return Err(std::string(StrError(Errno)));
+        return nullptr;
     }
 
     if (stream != INVALID_SOCKET)
@@ -82,21 +80,21 @@ Result<UdpSocket> UdpSocket::Bind(Slice<const char> host, uint16_t port, int bac
         {
             fprintf(stdout, "%s:%d socket_listen failed: errno %d\n", __FILE__, __LINE__, errno);
             close(stream);
-            return Err(std::string(StrError(Errno)));
+            return nullptr;
         }
 
-        return Ok(UdpSocket(stream));
+        return new(std::nothrow) UdpSocket(stream);
     }
 
-    return Err(std::string(StrError(Errno)));
+    return nullptr;
 }
 
 
-Result<UdpSocket> UdpSocket::Bind(std::string domain, uint16_t port, int backlog) {
+UdpSocket * UdpSocket::Bind(std::string domain, uint16_t port, int backlog) {
     return Bind(Slice<const char>{domain.c_str(), domain.length()}, port, 0);
 }
 
-Result<UdpSocket> UdpSocket::Bind(std::string domain, int backlog) {
+UdpSocket * UdpSocket::Bind(std::string domain, int backlog) {
 
     int num = std::count(domain.begin(),domain.end(),':');
     std::cout << " std::count " << num << std::endl;
@@ -112,18 +110,18 @@ Result<UdpSocket> UdpSocket::Bind(std::string domain, int backlog) {
 
         if ( start ==  std::string::npos || end == std::string::npos)
         {
-            return Err(std::string ("Illegal string"));
+            return nullptr;
         }
 
         if (  start > end )
         {
-            return Err(std::string ("Illegal string"));
+            return nullptr;
         }
         std::string host = domain.substr(start + 1, end);   // get from "live" to the end
 
         std::string ports = domain.substr(end +2); // get from "live" to the end
         if( ports.empty())
-            return Err(std::string ("Illegal string"));
+            return nullptr;
 
         int port = atoi(ports.c_str());
 
@@ -162,42 +160,40 @@ Result<UdpSocket> UdpSocket::Bind(std::string domain, int backlog) {
 
 
 
-Result<UdpSocket> UdpSocket::Connect(SocketAddr host, struct timeval timeout)
+UdpSocket * UdpSocket::Connect(SocketAddr host, struct timeval timeout)
 {
     int family = host.is_v4() ? AF_INET : AF_INET6;
 
     auto client = Socket::Create(family, SOCK_STREAM, IPPROTO_TCP);
-    if( client.is_err())
+    if( !client )
     {
         printf("Socket::Create error\n");
-        return Err(client.unwrap_err());
+        return nullptr;
     }
-
-    auto _client  = client.unwrap();
 
     /* 没有超时时间*/
     if( timeout.tv_sec == 0 && timeout.tv_usec == 0)
     {
-        auto ret = _client.connect(host);
+        auto ret = client->connect(host);
 
-        if( ret.is_err())
+        if( !ret )
         {
-            return Err(ret.unwrap_err());
+            return nullptr;
         }
 
-        return Ok(UdpSocket(_client.take()));
+        return new(std::nothrow) UdpSocket(client->take());
     }
 
     // 清除错误
     int opt_val = 0;
     int length = sizeof(opt_val);
-    auto socket_fd = _client.get_socket( );
+    auto socket_fd = client->get_socket( );
 
-    _client.set_nodelay(1);
+    client->set_nodelay(1);
 
     printf("time start %lld\n", time(nullptr));
-    auto ret = _client.connect(host);
-    if( ret.is_err())
+    auto ret = client->connect(host);
+    if( !ret )
     {
 #ifdef  __WINDOWS__
         if( Errno == WSAEWOULDBLOCK)
@@ -216,18 +212,18 @@ Result<UdpSocket> UdpSocket::Connect(SocketAddr host, struct timeval timeout)
         }
     }
     printf("time end %lld\n", time(nullptr));
-    _client.set_nodelay(0);
+    client->set_nodelay(0);
 
     if (0 == opt_val)
     {
-        return Ok(UdpSocket(_client.take()));
+        return new(std::nothrow) UdpSocket(client->take());
     }
     else{
-        return Err(client.unwrap_err());
+        return nullptr;
     }
 }
 
-Result<UdpSocket> UdpSocket::Connect(Slice<const char> host, size_t port,  struct timeval timeout)
+UdpSocket * UdpSocket::Connect(Slice<const char> host, size_t port, struct timeval timeout)
 {
     auto stream = INVALID_SOCKET;
     struct addrinfo hints{0};
@@ -254,10 +250,10 @@ Result<UdpSocket> UdpSocket::Connect(Slice<const char> host, size_t port,  struc
             std::cout << "ip_addr :" << ip_addr.to_string() << "." << std::endl;
 
             auto client = Connect(ip_addr, timeout);
-            if( client.is_err())
+            if( !client)
                 continue;
 
-            stream = client.unwrap().take();
+            stream = client->take();
             std::cout << "find "<<std::endl;
             break;
 
@@ -267,31 +263,30 @@ Result<UdpSocket> UdpSocket::Connect(Slice<const char> host, size_t port,  struc
     else
     {
         std::cout << "getaddrinfo error :" <<std::endl;
-        auto _ips =  SocketAddr::Create( host, port);
-        if( _ips.is_err()){
-            return Err(_ips.unwrap_err());
+        auto ips =  SocketAddr::Create( host, port);
+        if( !ips ){
+            return nullptr;
         }
 
-        auto ips= _ips.unwrap();
-        ips.set_port(port);
+        ips->set_port(port);
 
-        std::cout << "ips :" << ips.to_string() << "."<<std::endl;
+        std::cout << "ips :" << ips->to_string() << "."<<std::endl;
 
         auto client = Connect(ips, timeout);
-        if( client.is_err())
-            return Err(_ips.unwrap_err());
+        if( !client )
+            return nullptr;
 
         stream = client.unwrap().take();
 
     }
 
     if( stream == INVALID_SOCKET)
-        return Err(std::string(StrError(Errno)));
+        return nullptr;
 
-    return Ok(UdpSocket(stream));
+    return new(std::nothrow) UdpSocket(stream);
 }
 
-Result<UdpSocket> UdpSocket::Connect(const std::string& domain,  struct timeval timeout )
+UdpSocket * UdpSocket::Connect(const std::string& domain, struct timeval timeout )
 {
     int num = std::count(domain.begin(),domain.end(),':');
     std::cout << " std::count " << num << std::endl;
@@ -307,18 +302,18 @@ Result<UdpSocket> UdpSocket::Connect(const std::string& domain,  struct timeval 
 
         if ( start ==  std::string::npos || end == std::string::npos)
         {
-            return Err(std::string ("Illegal string"));
+            return nullptr;
         }
 
         if (  start > end )
         {
-            return Err(std::string ("Illegal string"));
+            return nullptr;
         }
         std::string host = domain.substr(start + 1, end);   // get from "live" to the end
 
         std::string ports = domain.substr(end +2); // get from "live" to the end
         if( ports.empty())
-            return Err(std::string ("Illegal string"));
+            return nullptr;
 
         int port = atoi(ports.c_str());
 
@@ -339,7 +334,7 @@ Result<UdpSocket> UdpSocket::Connect(const std::string& domain,  struct timeval 
     }
 }
 
-Result<UdpSocket> UdpSocket::Connect(SocketAddr host, uint64_t microseconds)
+UdpSocket * UdpSocket::Connect(SocketAddr host, uint64_t microseconds)
 {
     struct timeval timeout{0,0};
     timeout.tv_sec = microseconds / 1000;
@@ -348,7 +343,7 @@ Result<UdpSocket> UdpSocket::Connect(SocketAddr host, uint64_t microseconds)
     return Connect( std::move(host), timeout);
 }
 
-Result<UdpSocket> UdpSocket::Connect(Slice<const char> host, size_t port, uint32_t microseconds)
+UdpSocket * UdpSocket::Connect(Slice<const char> host, size_t port, uint32_t microseconds)
 {
     struct timeval timeout{0, 0};
     timeout.tv_sec = microseconds / 1000;
@@ -357,7 +352,7 @@ Result<UdpSocket> UdpSocket::Connect(Slice<const char> host, size_t port, uint32
     return Connect( std::move(host), port, timeout);
 }
 
-Result<UdpSocket> UdpSocket::Connect(const std::string& domain, uint32_t microseconds )
+UdpSocket * UdpSocket::Connect(const std::string& domain, uint32_t microseconds )
 {
     std::size_t pos = domain.find(':'); // position of "live" in str
     if (pos > 0)

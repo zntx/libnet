@@ -10,7 +10,6 @@
 #include <string>
 #include <stdint.h>
 #include "Slice.h"
-#include "Result.h"
 #include "SocketAddr.h"
 #include "Socket.h"
 
@@ -21,16 +20,17 @@ class TcpStream : public Socket
 {
 
 public:
-    static Result<TcpStream> Connect(SocketAddr &addr, struct timeval  = {0,0});
-    static Result<TcpStream> Connect(Slice<const char> host, size_t port, struct timeval  = {0,0});
-    static Result<TcpStream> Connect(const std::string& domain, struct timeval = {0,0});
+    static TcpStream* TcpStream::Connect(SocketAddr* addr, struct timeval timeout);
+    static TcpStream* Connect(SocketAddr &addr, struct timeval timeout);
+    static TcpStream* Connect(Slice<const char> host, size_t port, struct timeval timeout);
+    static TcpStream* Connect(const std::string& domain, struct timeval timeout);
 
-    static Result<TcpStream> Connect(SocketAddr &addr, uint32_t microseconds = 0);
-    static Result<TcpStream> Connect(Slice<const char> host, size_t port, uint32_t microseconds = 0);
-    static Result<TcpStream> Connect(const std::string& domain, uint32_t microseconds = 0);
+    static TcpStream * Connect(SocketAddr &addr, uint32_t microseconds = 0);
+    static TcpStream * Connect(Slice<const char> host, size_t port, uint32_t microseconds = 0);
+    static TcpStream * Connect(const std::string& domain, uint32_t microseconds = 0);
 
     template<typename Rep, typename Period>
-    static Result<TcpStream> Connect( SocketAddr &host, const chrono::duration<Rep, Period>& _rtime) {
+    static TcpStream* Connect( SocketAddr &host, const chrono::duration<Rep, Period>& _rtime) {
         if (_rtime <= _rtime.zero())
             return Connect(host ,0);
         auto _s = chrono::duration_cast<chrono::seconds>(_rtime);
@@ -44,7 +44,7 @@ public:
     }
 
     template<typename Rep, typename Period>
-    static Result<TcpStream> Connect( std::string &domain, const chrono::duration<Rep, Period>& _rtime) {
+    static TcpStream* Connect( std::string &domain, const chrono::duration<Rep, Period>& _rtime) {
         if (_rtime <= _rtime.zero())
             return Connect(domain ,0);
         auto _s = chrono::duration_cast<chrono::seconds>(_rtime);
@@ -58,7 +58,7 @@ public:
     }
 
     template<typename Rep, typename Period>
-    static Result<TcpStream> Connect( Slice<const char> &host, size_t port, const chrono::duration<Rep, Period>& _rtime) {
+    static TcpStream* Connect( Slice<const char> &host, size_t port, const chrono::duration<Rep, Period>& _rtime) {
         if (_rtime <= _rtime.zero())
             return Connect(host, port ,0);
         auto _s = chrono::duration_cast<chrono::seconds>(_rtime);
@@ -87,7 +87,7 @@ public:
     //Result<SocketAddr, int> local_addr();
 
     // Result<void, string> shutdown(Shutdown how);
-    Result<TcpStream, int> try_clone();
+    //Result<TcpStream, int> try_clone();
     // Result<void, string> set_read_timeout(struct timeval *tv);
     // Result<void, string> set_read_timeout(Option<duration> dur);
     // Result<void, string> set_write_timeout(struct timeval *tv);

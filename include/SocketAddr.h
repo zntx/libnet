@@ -1,8 +1,7 @@
 #ifndef SocketAddr_H_H
 #define SocketAddr_H_H
 
-#include "Option.h"
-#include "Result.h"
+
 #include "IpAddr.h"
 
 class AddrParseError{
@@ -57,14 +56,14 @@ public:
         struct sockaddr_in6 sin6;
     };
 
-    static Result<SocketAddr> Create(std::string ips);
-    static Result<SocketAddr> Create(std::string ips, uint16_t port);
-    static Result<SocketAddr> Create(Slice<const char> domain, uint16_t port);
+    static SocketAddr * Create(std::string ips);
+    static SocketAddr * Create(std::string ips, uint16_t port);
+    static SocketAddr * Create(Slice<const char> domain, uint16_t port);
     /*
      *  [ipv6]:port
      *  *.*.*.*:port
      * */
-    static Result<SocketAddr> Create( Slice<const char> domain);
+    static SocketAddr * Create(Slice<const char> domain);
 
     SocketAddr();
     explicit SocketAddr(struct in_addr addr, uint16_t port);
@@ -85,7 +84,7 @@ public:
 
     bool is_v4();
     bool is_v6();
-    IpAddr ipaddr();
+    IpAddr * ipaddr();
     uint16_t port( );
     void set_port( uint16_t port);
 
