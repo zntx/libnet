@@ -72,6 +72,7 @@ public:
 
     explicit UdpSocket(SOCKET fd);
     size_t write(const Slice<uint8_t>& slice);
+    size_t write(const Slice<char>& slice);
     size_t read(const Slice<uint8_t>& slice);
     /* Returns the socket address of the remote peer of this TCP connection. */
     //Result<SocketAddr> peer_addr();

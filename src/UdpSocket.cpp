@@ -387,3 +387,8 @@ size_t UdpSocket::write(const Slice<uint8_t>& slice)
 {
     return send(this->fd, (char*)slice.addr, slice.len, 0);
 }
+
+size_t UdpSocket::write(const Slice<char>& slice)
+{
+    return send(this->fd, (char*)slice.addr, slice.len, 0);
+}
