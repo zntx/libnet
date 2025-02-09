@@ -33,17 +33,17 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 #    target_link_libraries( testnet ws2_32 )
 #endif()
 
-add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory  ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/standir_dir/include/net
-        COMMENT "Copying folder from ${CMAKE_CURRENT_SOURCE_DIR}/include to ${CMAKE_SOURCE_DIR}/standir_dir/include/net after building MyLibrary"
-        VERBATIM
-)
+#add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy_directory  ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/standir_dir/include/net
+#        COMMENT "Copying folder from ${CMAKE_CURRENT_SOURCE_DIR}/include to ${CMAKE_SOURCE_DIR}/standir_dir/include/net after building MyLibrary"
+#        VERBATIM
+#)
 
-add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/net.h
-        ${CMAKE_SOURCE_DIR}/standir_dir/include/
-)
+#add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy
+#        ${CMAKE_CURRENT_SOURCE_DIR}/net.h
+#        ${CMAKE_SOURCE_DIR}/standir_dir/include/
+#)
 
 # 创建一个自定义命令，用于复制文件夹
 #add_custom_command(
@@ -56,3 +56,13 @@ add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
 #add_custom_target(CopyFolder ALL
 #    DEPENDS "${DESTINATION_FOLDER}"
 #)
+
+
+install (TARGETS ${PROJECT_NAME}
+        LIBRARY DESTINATION lib)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include
+        DESTINATION include/net
+        FILES_MATCHING PATTERN "*.h"
+)
+
