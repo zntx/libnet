@@ -7,6 +7,7 @@
 #include <iostream>
 #include "socket_include.h"
 #include "TcpStream.h"
+#include "Space.h"
 
 
 Result<TcpStream> TcpStream::Connect(SocketAddr &addr, struct timeval timeout)
@@ -243,12 +244,59 @@ size_t TcpStream::read(Slice<uint8_t> &slice)
     return recv(this->fd, (char*)slice.addr, slice.len, 0);
 }
 
-int TcpStream::read(Slice<char> &slice)
+Result<size_t> TcpStream::read(Slice<char> &slice)
 {
-    return recv(this->fd, slice.addr, slice.len, 0);
+    ssize_t len = recv(this->fd, slice.addr, slice.len, 0);
+    if( len > 0) {
+        return Ok(static_cast<size_t>(len));
+    }
+    else
+        return Err(string(StrError(errno)));
 }
 
 size_t TcpStream::write(Slice<uint8_t> &slice)
 {
     return send(this->fd,  (char*)slice.addr, slice.len, 0);
+}
+
+
+Result<bool> TcpStream::read_line(Space<char> &buf)
+{
+    char date = 0;
+    Slice<char> slice(&date, 1);
+    while(true) {
+        auto ret = this->peek(slice);
+        if( ret.is_err()) {
+            return Err(std::string(StrError(errno)));
+        }
+
+        // 没数据
+        auto len = ret.unwrap();
+        if( len  == 0) {
+            return Ok(false);
+        }
+        //不是 ASIIC
+        if ( slice.at(0) < 0 || slice.at(0) > 127) {
+            return Ok(false);
+        }
+
+
+        auto ret1 = this->read(slice);
+        if( ret1.is_err()) {
+            return Err(std::string(StrError(errno)));
+            break;
+        }
+
+        auto len1= ret1.unwrap();
+        if( len1  == 0) {
+            return Ok(false);
+        }
+
+        buf.copy(slice );
+        if ( slice.at(0) == '\n') {
+            return Ok(true);
+        }
+    }
+
+    return Err(std::string(StrError(errno)));
 }

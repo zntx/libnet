@@ -287,45 +287,6 @@ public:
 };
 
 
-template<typename T>
-class Space : public Slice<T> {
-public:
-    static Space<T> Create(std::size_t size) {
-        T *addr = new(std::nothrow)  T[size];
 
-        if (addr == nullptr) {
-            return {nullptr, 0};
-        }
-
-        //printf(" Space new %p\n", addr );
-        return Space<T>(addr, size);
-    }
-
-    Space(T *_addr, std::size_t size) : Slice<T>(_addr, size) {
-        //this->data_size = 0;
-    }
-
-    Space(Space &&old) noexcept: Slice<T>(std::move(old)) {
-        this->addr = old.addr;
-        this->len = old.len;
-
-        old.addr = nullptr;
-        old.len = 0;
-    }
-
-    Space(Space &) = delete;
-
-    Space(const Space &) = delete;
-
-    ~Space() {
-        //std::cout << "~Space() :"  << std::endl;
-        if (this->addr != nullptr) {
-            printf(" ~Space() : delete %p\n", this->addr);
-            //std::cout << "~Space() : delete1"  << std::endl;
-            delete[] this->addr;
-            //std::cout << "~Space() : delete2"  << std::endl;
-        }
-    }
-};
 
 #endif

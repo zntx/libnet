@@ -8,4 +8,6 @@
 #include "net/TcpStream.h"
 #include "net/TcpListener.h"
 #include "net/UdpSocket.h"
+#include "net/zstdint.h"
+#include "net/Space.h"
 #endif

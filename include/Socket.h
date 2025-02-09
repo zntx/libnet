@@ -66,7 +66,7 @@ public:
     /** "Default" constructor */
     Socket( SOCKET _soket = 0 );
     Socket( Socket&&  soc);
-
+    Socket& operator=(Socket&& ) ;
     virtual ~Socket();
 
     static  Result<Socket> Create(int famliy, int type, int protno);
@@ -110,6 +110,11 @@ public:
     bool nodelay();
     /** Set socket non-block operation. */
     bool set_nodelay(bool bNb);
+
+    Result<size_t> peek(const Slice<char>&);
+
+
+
 
     /** \name Event callbacks */
     //@{
@@ -223,8 +228,8 @@ public:
 
     bool SetSoRcvbuf(int);
     int SoRcvbuf();
-    bool SetSoSndbuf(int);
-    int SoSndbuf();
+    bool SetSoSendbuf(int);
+    int SoSendbuf();
     int SoType();
     bool set_reuse(bool x = true);
     bool SetSoKeepalive(bool x = true);
@@ -296,6 +301,8 @@ protected:
 #ifdef _WIN32
     static	WSAInitializer m_winsock_init; ///< Winsock initialization singleton class
 #endif
+
+    Result<size_t> read_lineread_line(std::string &buf);
 };
 
 

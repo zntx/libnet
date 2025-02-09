@@ -70,7 +70,13 @@ public:
         return Connect(host, port , timeout);
     }
 
-    explicit UdpSocket(SOCKET fd);
+    UdpSocket(SOCKET fd);
+    UdpSocket(const UdpSocket&) = delete;
+    UdpSocket(UdpSocket&) = delete;
+    UdpSocket(UdpSocket&&) noexcept ;
+    UdpSocket& operator=(UdpSocket&) = delete;
+    UdpSocket& operator=(UdpSocket&&) noexcept ;
+
     size_t write(const Slice<uint8_t>& slice);
     size_t write(const Slice<char>& slice);
     size_t read(const Slice<uint8_t>& slice);
@@ -96,6 +102,9 @@ public:
     //Result<uint32_t, int> ttl();
     //Result<void,int> take_error();
     //Result<void,int> set_nonblocking(bool nonblocking);
+
+    Result<SocketAddr> ReadFromUDP(Slice<char>& slice, int& len);
+
 };
 
 #endif

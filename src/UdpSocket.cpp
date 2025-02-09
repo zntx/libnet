@@ -275,7 +275,7 @@ Result<UdpSocket> UdpSocket::Connect(Slice<const char> host, size_t port,  struc
         auto ips= _ips.unwrap();
         ips.set_port(port);
 
-        std::cout << "ips :" << ips.to_string() << "."<<std::endl;
+        std::cout << "ips :" << ips.to_string() << "." << std::endl;
 
         auto client = Connect(ips, timeout);
         if( client.is_err())
@@ -378,6 +378,27 @@ UdpSocket::UdpSocket(SOCKET fd)
 {
     this->fd = fd;
 }
+
+UdpSocket::UdpSocket(UdpSocket&& other) noexcept
+{
+    if (this != &other) {
+        // 调用基类的移动赋值运算符
+        Socket::operator=(std::move(other));
+        // 处理派生类自身的成员变量
+    }
+}
+
+UdpSocket& UdpSocket::operator=(UdpSocket&& other) noexcept
+{
+    if (this != &other) {
+        // 调用基类的移动赋值运算符
+        Socket::operator=(std::move(other));
+        // 处理派生类自身的成员变量
+    }
+
+    return *this;
+}
+
 size_t UdpSocket::read(const Slice<uint8_t>& slice)
 {
     return recv(this->fd, (char*)slice.addr, slice.len, 0);
@@ -391,4 +412,17 @@ size_t UdpSocket::write(const Slice<uint8_t>& slice)
 size_t UdpSocket::write(const Slice<char>& slice)
 {
     return send(this->fd, (char*)slice.addr, slice.len, 0);
+}
+
+Result<SocketAddr> UdpSocket::ReadFromUDP(Slice<char>& slice, int& len)
+{
+    struct sockaddr_storage client_addr;
+    socklen_t client_addr_len;
+
+    ssize_t recv_len = recvfrom(this->fd, slice.addr, slice.len, 0, (struct sockaddr *)&client_addr, &client_addr_len);
+    if (recv_len == -1) {
+        return Err( string("recvfrom failed") + strerror(errno));
+    }
+
+    return Ok(SocketAddr(client_addr));
 }

@@ -33,11 +33,11 @@ public:
     TcpListener(TcpListener &&other)  ;
 
 
-    Result<std::pair<TcpStream, SocketAddr>> accept(uint32_t msecond = 0);
-    Result<std::pair<TcpStream, SocketAddr>> accept(struct timeval timeout ={0,0});
+    Result<TcpStream> accept(uint32_t msecond = 0);
+    Result<TcpStream> accept(struct timeval timeout ={0,0});
 
     template<typename Rep, typename Period>
-    Result<std::pair<TcpStream, SocketAddr>> accept(  const chrono::duration<Rep, Period>& rtime) {
+    Result<TcpStream > accept(  const chrono::duration<Rep, Period>& rtime) {
         if (rtime <= rtime.zero())
             return accept( 0);
 

@@ -15,7 +15,8 @@ set( CMAKE_BUILD_TYPE "Debug" )
 aux_source_directory(src SOURCES)
 
 # 生成一个静态库，会生成一个libhello.a文件
-add_library( ${PROJECT_NAME} STATIC ${SOURCES} )
+add_library( ${PROJECT_NAME} STATIC ${SOURCES}
+        include/Space.h)
 # 生成一个共享库，会生成一个libhello_shared.so文件
 #add_library( ${CMAKE_PROJECT_NAME} SHARED ${SOURCES} )
 

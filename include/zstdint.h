@@ -68,7 +68,7 @@ struct u16
     {
         value = a;
     }
-    u16 from_be_bytes(uint8_t (&array)[2])
+    static u16 from_be_bytes(uint8_t (&array)[2])
     {
         uint16_t a = array[0];
         uint16_t b = array[1];
@@ -76,7 +76,7 @@ struct u16
         return from_be_bytes( a, b );
     }
 
-    u16 from_be_bytes(uint8_t a, uint8_t b)
+    static u16 from_be_bytes(uint8_t a, uint8_t b)
     {
         if( is_big()) 
         {

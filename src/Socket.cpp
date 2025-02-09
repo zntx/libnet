@@ -20,6 +20,7 @@
 #include "Socket.h"
 #include "IpAddr.h"
 
+
 // statics
 #ifdef __WINDOWS__
 
@@ -96,6 +97,12 @@ Socket::Socket( Socket&&  soc)
     soc.fd = INVALID_SOCKET;
 }
 
+Socket &Socket::operator=( Socket && soc)
+{
+    this->fd = soc.fd;
+    soc.fd = INVALID_SOCKET;
+    return *this;
+}
 
 Socket::~Socket()
 {
@@ -105,15 +112,14 @@ Socket::~Socket()
         return ;
     }
     int n;
-    //Handler().ISocketHandler_Del(this); // remove from fd_set's
+
     if ((n = closesocket(fd)) == -1)
     {
         // failed...
-        fprintf(stdout, "close %d %s", Errno, StrError(Errno));
+        fprintf(stdout, "close %llu %s", fd, StrError(Errno));
     }
-    fprintf(stdout, "close %d %s\n", Errno, StrError(Errno));
+    fprintf(stdout, "close %llu  \n", fd );
     fd = INVALID_SOCKET;
-    return ;
 }
 
 Result<Socket> Socket::Create(int famliy, int type, int protno)
@@ -517,6 +523,23 @@ bool Socket::set_nodelay(bool bNb)
     else
         return false;
 }
+
+
+Result<size_t> Socket::peek(const Slice<char>& buf)
+{
+    ssize_t len = recv(get_socket(), buf.addr, buf.len, MSG_PEEK);
+    if (len >=0 ) {
+        return Ok(static_cast<size_t>(len));
+    }
+    else {
+        return Err(std::string(StrError(errno)));
+    }
+}
+
+
+
+
+
 
 /* IP options */
 bool Socket::SetIpOptions(const void *p, socklen_t len)
@@ -1240,7 +1263,7 @@ bool Socket::SetSoRcvbufforce(int x)
 #endif
 
 
-bool Socket::SetSoSndbuf(int x)
+bool Socket::SetSoSendbuf(int x)
 {
 #ifdef SO_SNDBUF
     if (setsockopt(get_socket(), SOL_SOCKET, SO_SNDBUF, (char *)&x, sizeof(x)) == -1)
@@ -1256,7 +1279,7 @@ bool Socket::SetSoSndbuf(int x)
 }
 
 
-int Socket::SoSndbuf()
+int Socket::SoSendbuf()
 {
     int value = 0;
 #ifdef SO_SNDBUF
@@ -1315,6 +1338,7 @@ int Socket::SoType()
 }
 
 
+
 // void Socket::SetTimeout(time_t secs)
 // {
 // 	if (!secs)
@@ -1351,6 +1375,7 @@ int Socket::SoType()
 // 		return true;
 // 	return false;
 // }
+
 
 
 

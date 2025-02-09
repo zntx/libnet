@@ -13,6 +13,7 @@
 #include "Result.h"
 #include "SocketAddr.h"
 #include "Socket.h"
+#include "Space.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -80,8 +81,11 @@ public:
     TcpStream &operator=(TcpStream &&other)  ;
 
     size_t write(Slice<uint8_t> &slice);
-    int read(Slice<char> &slice);
+    Result<size_t> read(Slice<char> &slice);
     size_t read(Slice<uint8_t> &slice);
+
+    Result<bool> read_line(Space<char> &buf);
+
     /* Returns the socket address of the remote peer of this TCP connection. */
     //Result<SocketAddr, int> peer_addr();
     //Result<SocketAddr, int> local_addr();
