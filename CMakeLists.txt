@@ -61,8 +61,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 install (TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION lib)
 
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
         DESTINATION include/net
         FILES_MATCHING PATTERN "*.h"
+)
+
+install(FILES ${PROJECT_SOURCE_DIR}/net.h
+        DESTINATION include
 )
 
