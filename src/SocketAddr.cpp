@@ -135,27 +135,24 @@ Result<SocketAddr> SocketAddr::Create(Slice<const char> domain, uint16_t port)
 Result<SocketAddr> SocketAddr::Create( Slice<const char> domain)
 {
     auto start = domain.find('[');
-    if( !start.is_empty()) // [:::::]:port
+    if( start != domain.size() ) // [:::::]:port
     {
         const char* end_str = "]:";
         auto end = domain.find(Slice<const char>(end_str, 2));
-        if( start.is_empty())
+        if( end == domain.size() )
         {
             return Err(std::string("[]: 格式不对"));
         }
 
-        auto start_real = start.unwrap();
-        auto end_real = end.unwrap();
+        auto ips = domain.subslice(start + 1, end - start -1);
+        auto ports = domain.subslice(end + 3);
 
-        auto ips = domain.slice(start_real + 1, end_real);
-        auto ports = domain.slice(end_real + 3);
-
-        if( ips.is_empty() || ports.is_empty())
+        if( ips.no_legal() || ports.no_legal())
         {
             return Err(std::string("[]: 格式不对"));
         }
 
-        int port = atoi(ports.unwrap().addr);
+        int port = std::stoi(ports.to_string());
 
         return Create(domain, (uint16_t)port);
     }
@@ -167,27 +164,26 @@ Result<SocketAddr> SocketAddr::Create( Slice<const char> domain)
     }
 
     auto postion = domain.find(':');
-    if(postion.is_empty())
+    if(postion != domain.size() )
     {
         return Create(domain, 0);
     }
     else //*.*.*.*:port
     {
-        auto postion_real = postion.unwrap();
-        auto ips = domain.slice(0, postion_real);
-        auto ports = domain.slice(postion_real + 1);
+        auto ips = domain.subslice(0, postion );
+        auto ports = domain.subslice(postion + 1);
 
-        if( ips.is_empty() || ports.is_empty())
+        if( ips.no_legal() || ports.no_legal())
         {
             return Err(std::string("[]: 格式不对"));
         }
 
-        int port = atoi(ports.unwrap().addr);
+        int port = std::stoi(ports.to_string());
 
-        auto ips_slic = ips.unwrap();
-        printf("ips_slic %s %zu\n",  ips_slic.addr, ips_slic.len );
+        //auto ips_slic = ips.unwrap();
+        printf("ips_slic %s %zu\n",  ips.addr, ips.len );
 
-        return Create(ips_slic, (uint16_t)port);
+        return Create(ips, (uint16_t)port);
     }
 
 }

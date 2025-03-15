@@ -7,7 +7,7 @@
 #include <iostream>
 #include "socket_include.h"
 #include "TcpStream.h"
-#include "Space.h"
+#include "Array.h"
 
 
 Result<TcpStream> TcpStream::Connect(SocketAddr &addr, struct timeval timeout)
@@ -260,10 +260,10 @@ size_t TcpStream::write(Slice<uint8_t> &slice)
 }
 
 
-Result<bool> TcpStream::read_line(Space<char> &buf)
+Result<bool> TcpStream::read_line(Array<char> &buf)
 {
     char date = 0;
-    Slice<char> slice(&date, 1);
+    Slice<char> slice(&date, (std::size_t )1);
     while(true) {
         auto ret = this->peek(slice);
         if( ret.is_err()) {

@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+# 设置包含目录
+set_and_check(LIBNET_INCLUDE_DIRS "@PACKAGE_INCLUDE_DIRS@")
+set_and_check(LIBNET_LIBRARY_DIRS "@PACKAGE_LIBRARY_DIRS@")
+
+# 检查并设置库文件路径
+check_required_components(libnet)

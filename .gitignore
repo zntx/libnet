@@ -1,9 +1,4 @@
 build/
-.idea/.gitignore
-.idea/deployment.xml
-.idea/encodings.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/net.iml
-.idea/vcs.xml
+.idea/
 cmake-*
+staging_dir/

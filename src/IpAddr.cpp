@@ -875,7 +875,7 @@ Result<IpAddr> IpAddr::Create(std::string host)
 
 Result<IpAddr> IpAddr::Create(Slice<const char> host)
 {
-    if( host.find(':').is_empty() )
+    if( host.find(':') == host.size() )
     {
         auto r_v4 = Ipv4Addr::Create(host);
         if (r_v4.is_ok())
